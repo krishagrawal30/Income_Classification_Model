@@ -1,51 +1,98 @@
 import streamlit as st
 import pandas as pd
 import joblib
+from PIL import Image
 
-# Load trained model
+st.set_page_config(
+    page_title="Income Classification App",
+    page_icon="💼",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 model = joblib.load("income_model.pkl")
 
-st.set_page_config(page_title="Income Classification", page_icon="💼", layout="centered")
-st.title("💼 Income Classification App")
-st.write("Predict whether a person earns **>50K or <=50K** based on census data.")
+st.title(" Income Classification App")
+st.markdown(
+    """
+    <style>
+    .main-title {
+        font-size:30px !important;
+        color:#1f77b4;
+        font-weight:600;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-# --- Input fields ---
-st.subheader("Enter User Information")
+st.markdown("### Predict whether a person earns **>50K** or **≤50K** based on U.S. Census data.")
 
-workclass = st.selectbox("Workclass", ["Private", "Self-emp-not-inc", "Self-emp-inc", "Federal-gov","Local-gov", "State-gov", "Without-pay", "Never-worked"])
+st.divider()
 
-education = st.selectbox('Education', ['School', 'HS-grad', 'Bachelors', 'Masters', 'Doctorate', 'Some-college', 'Assoc-acdm', 'Assoc-voc', 'Prof-school'])
+st.sidebar.header("📊 About the Project")
+st.sidebar.write(
+    """
+    This ML model predicts whether an individual's income exceeds 50K USD
+    using demographic and occupational data.
+    """
+)
+st.sidebar.info(
+    """
+    **Model Used:** Gradient Boosting Classifier  
+    **Best Accuracy:** 87.1%  
+    **Dataset:** UCI Adult Census  
+    """
+)
+st.sidebar.write("👨‍💻 *Developed by Krish Agrawal*")
 
-occupation = st.selectbox("Occupation", [
-    "Tech-support", "Craft-repair", "Other-service", "Sales", "Exec-managerial",
-    "Prof-specialty", "Handlers-cleaners", "Machine-op-inspct", "Adm-clerical",
-    "Farming-fishing", "Transport-moving", "Priv-house-serv", "Protective-serv", "Armed-Forces"
-])
+st.subheader("🧾 Enter User Information")
 
-relationship = st.selectbox("Relationship", ["Wife", "Own-child", "Husband", "Not-in-family", "Other-relative", "Unmarried"])
+col1, col2 = st.columns(2)
 
-race = st.selectbox('Race', ['White', 'Other'])
+with col1:
+    workclass = st.selectbox(
+        "Workclass",
+        ["Private", "Self-emp-not-inc", "Self-emp-inc", "Federal-gov", "Local-gov",
+         "State-gov", "Without-pay", "Never-worked"]
+    )
 
-sex = st.selectbox("Sex", ["Male", "Female"])
+    education = st.selectbox(
+        "Education",
+        ["School", "HS-grad", "Bachelors", "Masters", "Doctorate", "Some-college",
+         "Assoc-acdm", "Assoc-voc", "Prof-school"]
+    )
 
-native_country = st.selectbox("Native Country", [
-    "United-States", "Cuba", "Jamaica", "India", "Mexico", "Puerto-Rico",
-    "Honduras", "England", "Canada", "Germany", "Iran", "Philippines",
-    "Poland", "Columbia", "Cambodia", "Thailand", "Ecuador", "Laos",
-    "Taiwan", "Haiti", "Portugal", "Dominican-Republic", "El-Salvador",
-    "France", "Guatemala", "Italy", "China", "Japan", "Yugoslavia",
-    "Peru", "Outlying-US(Guam-USVI-etc)", "Scotland", "Trinadad&Tobago",
-    "Greece", "Nicaragua", "Vietnam", "Hong", "Ireland", "Hungary",
-    "Holand-Netherlands"
-])
+    occupation = st.selectbox(
+        "Occupation",
+        ["Tech-support", "Craft-repair", "Other-service", "Sales", "Exec-managerial",
+         "Prof-specialty", "Handlers-cleaners", "Machine-op-inspct", "Adm-clerical",
+         "Farming-fishing", "Transport-moving", "Priv-house-serv",
+         "Protective-serv", "Armed-Forces"]
+    )
 
-age = st.number_input("Age", min_value=17, max_value=90, value=30)
-fnlwgt = st.number_input("Final Weight (fnlwgt)", min_value=10000, max_value=1000000, value=200000)
-capital_gain = st.number_input("Capital Gain", min_value=0, max_value=100000, value=0)
-capital_loss = st.number_input("Capital Loss", min_value=0, max_value=100000, value=0)
-hours_per_week = st.number_input("Hours per Week", min_value=1, max_value=100, value=40)
+    relationship = st.selectbox(
+        "Relationship",
+        ["Wife", "Own-child", "Husband", "Not-in-family", "Other-relative", "Unmarried"]
+    )
 
-# --- Convert inputs to dataframe ---
+    race = st.selectbox("Race", ["White", "Other"])
+    sex = st.radio("Sex", ["Male", "Female"])
+
+with col2:
+    native_country = st.selectbox(
+        "Native Country",
+        ["United-States", "India", "Mexico", "Philippines", "Germany", "Canada", "China",
+         "England", "France", "Japan", "Vietnam", "Iran", "Greece", "Italy", "Ireland",
+         "Poland", "Portugal", "Cuba", "Jamaica", "Other"]
+    )
+
+    age = st.slider("Age", 17, 90, 30)
+    fnlwgt = st.number_input("Final Weight (fnlwgt)", 10000, 1000000, 200000, step=1000)
+    capital_gain = st.number_input("Capital Gain", 0, 100000, 0, step=500)
+    capital_loss = st.number_input("Capital Loss", 0, 100000, 0, step=500)
+    hours_per_week = st.slider("Hours per Week", 1, 100, 40)
+
 input_data = pd.DataFrame({
     'workclass': [workclass],
     'education': [education],
@@ -61,16 +108,22 @@ input_data = pd.DataFrame({
     'hours.per.week': [hours_per_week]
 })
 
-# --- Preprocessing (One-Hot Encoding same as training) ---
 input_encoded = pd.get_dummies(input_data)
-# Align with training columns
 train_columns = model.feature_names_in_
 input_encoded = input_encoded.reindex(columns=train_columns, fill_value=0)
 
-# --- Prediction ---
 if st.button("Predict Income"):
-    prediction = model.predict(input_encoded)[0]
-    if prediction == '>50K':
-        st.success("✅ Predicted Income: **>50K**")
+    with st.spinner("Analyzing data and predicting..."):
+        prediction = model.predict(input_encoded)[0]
+
+    st.subheader("📈 Prediction Result:")
+    if prediction == ">50K":
+        st.success(" The model predicts that the person's income is **>50K USD**.")
+        st.balloons()
     else:
-        st.warning("💰 Predicted Income: **<=50K**")
+        st.warning(" The model predicts that the person's income is **≤50K USD**.")
+
+    st.info("Confidence: This prediction is based on your demographic and occupational details.")
+
+st.divider()
+st.caption("© 2025 Income Classification Model | Developed by Krish Agrawal 🚀")
